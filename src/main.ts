@@ -108,15 +108,24 @@ export async function playlistByCombo(cachedPlayer: CachedPlayer, fullCombo: boo
 
 export async function rankedPlaylistByStarValue(minStar:number, maxStar:number, syncLink?:string): Promise<Playlist> {
     const rankedMaps = await ScoreSaberApi.fetchRankedBetweenStars(minStar, maxStar);
-    const songs: Song[] = rankedMaps.map(rankedMaps => {
-        return { songName: rankedMaps.songName,
-            levelAuthorName: rankedMaps.levelAuthorName,
-            hash: rankedMaps.songHash,
-            levelid: 'custom_level_'+rankedMaps.songHash,
-            difficulties: [{ characteristic: 'Standard', name: rankedMaps.difficulty.difficultyRaw.split('_')[1] }],
-        };
+    let songs : Song[];
+    const songMap = new Map<string, Song>();
+    rankedMaps.map(rankedMap => {
+        const song : Song = {
+            songName: rankedMap.songName,
+            levelAuthorName: rankedMap.levelAuthorName,
+            hash: rankedMap.songHash,
+            levelid: 'custom_level_'+rankedMap.songHash,
+            difficulties: [{ characteristic: 'Standard', name: rankedMap.difficulty.difficultyRaw.split('_')[1] }],
+        } as Song;
+        if (songMap.has(rankedMap.songHash)) {
+            (songMap.get(rankedMap.songHash)!.difficulties!).concat(song.difficulties!);
+        }
+        // this means we need a new entry
+        songMap.set(rankedMap.songHash, song);
     });
-    return playlist(`Ranked maps ${minStar}-${maxStar}*`, './resources/SSLogo.png', songs, syncLink );
+    songs = [...songMap.values()];
+    return playlist(`Ranked Maps ${minStar} - ${maxStar} *`, '../src/resources/SSLogo.png', songs, syncLink);
 }
 
 // Returns a playlist of all the songs currently in the ranking queue.
